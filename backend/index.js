@@ -7,6 +7,8 @@ const connectDB = require('./lib/db');
 // Import routes
 const authRoutes = require('./api/auth');
 const videoRoutes = require('./api/videos');
+const analyticsRoutes = require('./api/analytics');
+const plannerRoutes = require('./api/planner');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +47,8 @@ const authLimiter = rateLimit({
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/videos', videoRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/planner', plannerRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
