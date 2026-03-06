@@ -83,7 +83,7 @@
                 "resource": "chat",
                 "model": "gpt-4o-mini",
                 "prompt": "={{ 'Aşağıdaki eğitim amaçlı video transkriptinden yapılandırılmış çalışma materyalleri oluştur:\\n\\n' + $json.transcript + '\\n\\nLütfen yanıtını SADECE JSON formatında ver, markdown işareti kullanma.' }}",
-                "systemMessage": "Sen uzman bir eğitim asistanısın. YKS (Türkiye üniversite sınavı) öğrencilerine yönelik içerikler hazırlıyorsun. Çıktın her zaman aşağıdaki JSON yapısına tam olarak uymalıdır:\n{\n  \"summary\": \"Konunun kapsamlı ve anlaşılır özeti...\",\n  \"notes\": \"- Önemli kavram 1\\n- Önemli kavram 2\", \n  \"flashcards\": [\n    { \"front\": \"Soru veya Kavram\", \"back\": \"Cevap veya Açıklama\" }\n  ],\n  \"quizQuestions\": [\n    {\n      \"question\": \"Soru metni nedir?\",\n      \"options\": [\"Secenek A\", \"Secenek B\", \"Secenek C\", \"Secenek D\"],\n      \"correctAnswer\": 0, // doğru seçeneğin index numarası (0-3 arası)\n      \"explanation\": \"Bu seçeneğin doğru olma nedeni...\"\n    }\n  ],\n  \"title\": \"Videonun içeriğine uygun bir başlık\",\n  \"subject\": \"Ders veya Konu adı (örn: Biyoloji)\",\n  \"tags\": [\"hücre\", \"mitokondri\"]\n}",
+                "systemMessage": "Sen uzman bir eğitim asistanısın. YKS (Türkiye üniversite sınavı) öğrencilerine yönelik içerikler hazırlıyorsun. Çıktın her zaman aşağıdaki JSON yapısına tam olarak uymalıdır:\n{\n  \"summary\": \"Konunun kapsamlı ve anlaşılır özeti...\",\n  \"notes\": \"- Önemli kavram 1\\n- Önemli kavram 2\",\n  \"flashcards\": [\n    { \"front\": \"Soru veya Kavram\", \"back\": \"Cevap veya Açıklama\" }\n  ],\n  \"quizQuestions\": [\n    {\n      \"question\": \"Soru metni\",\n      \"options\": [\"A\", \"B\", \"C\", \"D\"],\n      \"correctAnswer\": 0,\n      \"explanation\": \"Açıklama\"\n    }\n  ],\n  \"timestampNotes\": [\n    { \"time\": \"00:45\", \"seconds\": 45, \"note\": \"Konu açıklaması\" }\n  ],\n  \"yksQuestions\": [\n    {\n      \"question\": \"YKS tarzı soru metni\",\n      \"options\": [\"A\", \"B\", \"C\", \"D\"],\n      \"correctAnswer\": 0,\n      \"explanation\": \"Detaylı çözüm\",\n      \"difficulty\": \"orta\"\n    }\n  ],\n  \"title\": \"Videonun başlığı\",\n  \"subject\": \"Ders adı (örn: Biyoloji)\",\n  \"tags\": [\"hücre\", \"mitokondri\"]\n}\n\nÖnemli kurallar:\n- timestampNotes: Transkriptteki zaman bilgilerinden önemli noktaları çıkar. Eğer zaman bilgisi yoksa, yaklaşık süreler tahmin et.\n- yksQuestions: 15-20 arası YKS tarzı çoktan seçmeli soru oluştur. Sorular zorluk seviyesine göre (kolay/orta/zor) etiketle.\n- quizQuestions: 5-8 adet genel anlama sorusu oluştur.\n- Her soru için detaylı açıklama yaz.",
                 "options": {
                     "temperature": 0.3,
                     "responseFormat": {
@@ -111,7 +111,7 @@
         },
         {
             "parameters": {
-                "jsCode": "try {\n  // Parse the OpenAI response (assuming it's formatted as JSON string but n8n might parse it automatically)\n  let aiData = $input.item.json.message.content || $input.item.json.text || $input.item.json.content;\n  \n  if (typeof aiData === 'string') {\n    aiData = JSON.parse(aiData);\n  }\n\n  return {\n    videoId: $('Parse Input').item.json.videoId,\n    title: aiData.title || null,\n    subject: aiData.subject || null,\n    tags: aiData.tags || [],\n    summary: aiData.summary || \"\",\n    notes: aiData.notes || \"\",\n    flashcards: aiData.flashcards || [],\n    quizQuestions: aiData.quizQuestions || []\n  };\n} catch (error) {\n  throw new Error('Failed to parse AI response: ' + error.message);\n}"
+                "jsCode": "try {\n  let aiData = $input.item.json.message.content || $input.item.json.text || $input.item.json.content;\n  \n  if (typeof aiData === 'string') {\n    aiData = JSON.parse(aiData);\n  }\n\n  return {\n    videoId: $('Parse Input').item.json.videoId,\n    title: aiData.title || null,\n    subject: aiData.subject || null,\n    tags: aiData.tags || [],\n    summary: aiData.summary || \"\",\n    notes: aiData.notes || \"\",\n    flashcards: aiData.flashcards || [],\n    quizQuestions: aiData.quizQuestions || [],\n    timestampNotes: aiData.timestampNotes || [],\n    yksQuestions: aiData.yksQuestions || []\n  };\n} catch (error) {\n  throw new Error('Failed to parse AI response: ' + error.message);\n}"
             },
             "id": "6",
             "name": "Format Output",
@@ -160,6 +160,14 @@
                         {
                             "name": "tags",
                             "value": "={{ JSON.stringify($json.tags) }}"
+                        },
+                        {
+                            "name": "timestampNotes",
+                            "value": "={{ JSON.stringify($json.timestampNotes) }}"
+                        },
+                        {
+                            "name": "yksQuestions",
+                            "value": "={{ JSON.stringify($json.yksQuestions) }}"
                         }
                     ]
                 },
