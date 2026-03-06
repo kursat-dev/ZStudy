@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Video = require('../../models/Video');
 const User = require('../../models/User');
+const StudyAnalytics = require('../../models/StudyAnalytics');
 const { authenticate } = require('../../lib/middleware');
 
 // Extract YouTube video ID from URL
@@ -20,11 +21,18 @@ function extractYouTubeId(url) {
 // GET /api/videos — Get all user's videos
 router.get('/', authenticate, async (req, res) => {
     try {
-        const { page = 1, limit = 20, status, favorite } = req.query;
+        const { page = 1, limit = 20, status, favorite, subject, search } = req.query;
 
         const filter = { userId: req.user._id };
         if (status) filter.status = status;
         if (favorite === 'true') filter.isFavorite = true;
+        if (subject) filter.subject = subject;
+        if (search) {
+            filter.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { tags: { $regex: search, $options: 'i' } },
+            ];
+        }
 
         const videos = await Video.find(filter)
             .sort({ createdAt: -1 })
@@ -172,7 +180,7 @@ router.get('/:id', authenticate, async (req, res) => {
 // POST /api/videos/process — n8n callback to update video with AI results
 router.post('/process', async (req, res) => {
     try {
-        const { videoId, title, channelName, transcript, summary, notes, flashcards, quizQuestions, subject, tags } = req.body;
+        const { videoId, title, channelName, transcript, summary, notes, flashcards, quizQuestions, timestampNotes, yksQuestions, subject, tags } = req.body;
 
         if (!videoId) {
             return res.status(400).json({
@@ -197,6 +205,8 @@ router.post('/process', async (req, res) => {
         video.notes = notes || video.notes;
         video.flashcards = flashcards || video.flashcards;
         video.quizQuestions = quizQuestions || video.quizQuestions;
+        video.timestampNotes = timestampNotes || video.timestampNotes;
+        video.yksQuestions = yksQuestions || video.yksQuestions;
         video.subject = subject || video.subject;
         video.tags = tags || video.tags;
         video.status = 'completed';
@@ -281,6 +291,115 @@ router.delete('/:id', authenticate, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Video silinirken hata oluştu.',
+        });
+    }
+});
+
+// POST /api/videos/:id/quiz-result — Record quiz result
+router.post('/:id/quiz-result', authenticate, async (req, res) => {
+    try {
+        const { score, totalQuestions, correctAnswers, type } = req.body;
+        // type can be 'quiz' or 'yks'
+
+        const video = await Video.findOne({
+            _id: req.params.id,
+            userId: req.user._id,
+        });
+
+        if (!video) {
+            return res.status(404).json({
+                success: false,
+                message: 'Video bulunamadı.',
+            });
+        }
+
+        // Update per-topic analytics
+        if (video.subject) {
+            let analytics = await StudyAnalytics.findOne({
+                userId: req.user._id,
+                subject: video.subject,
+            });
+
+            if (!analytics) {
+                analytics = new StudyAnalytics({
+                    userId: req.user._id,
+                    subject: video.subject,
+                    videosWatched: 1,
+                });
+            }
+
+            analytics.totalQuestions += totalQuestions;
+            analytics.correctAnswers += correctAnswers;
+            analytics.updateAccuracy();
+            analytics.lastStudiedAt = new Date();
+
+            await analytics.save();
+        }
+
+        // Update user stats
+        const user = await User.findById(req.user._id);
+        user.totalQuizzesTaken += 1;
+
+        // Update study streak
+        const today = new Date().toISOString().split('T')[0];
+        const lastStudy = user.lastStudyDate
+            ? new Date(user.lastStudyDate).toISOString().split('T')[0]
+            : null;
+
+        if (lastStudy !== today) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            if (lastStudy === yesterdayStr) {
+                user.studyStreak += 1;
+            } else {
+                user.studyStreak = 1;
+            }
+            user.lastStudyDate = new Date();
+        }
+
+        // Update weekly stats
+        const now = new Date();
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        const weekKey = weekStart.toISOString().split('T')[0];
+
+        let weekIdx = user.weeklyStats.findIndex((w) => w.week === weekKey);
+        if (weekIdx === -1) {
+            user.weeklyStats.push({
+                week: weekKey,
+                videosWatched: 0,
+                quizzesTaken: 0,
+                accuracy: 0,
+                minutesStudied: 0,
+            });
+            weekIdx = user.weeklyStats.length - 1;
+        }
+
+        user.weeklyStats[weekIdx].quizzesTaken += 1;
+        const weekData = user.weeklyStats[weekIdx];
+        const oldTotal = weekData.accuracy * (weekData.quizzesTaken - 1);
+        const currentAccuracy = correctAnswers / totalQuestions;
+        weekData.accuracy = weekData.quizzesTaken > 0
+            ? (oldTotal + currentAccuracy) / weekData.quizzesTaken
+            : currentAccuracy;
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Quiz sonucu kaydedildi.',
+            data: {
+                accuracy: currentAccuracy,
+                studyStreak: user.studyStreak,
+            },
+        });
+    } catch (error) {
+        console.error('Quiz result error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Quiz sonucu kaydedilirken hata oluştu.',
         });
     }
 });
