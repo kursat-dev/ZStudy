@@ -93,7 +93,8 @@ class ApiService {
         }
     }
 
-    // Auth
+    // ─── Auth ─────────────────────────────────────────────
+
     async register(name: string, email: string, password: string) {
         return this.request<any>('/auth/register', {
             method: 'POST',
@@ -112,9 +113,15 @@ class ApiService {
         return this.request<any>('/auth/me');
     }
 
-    // Videos
-    async getVideos(page = 1, limit = 20) {
-        return this.request<any>(`/videos?page=${page}&limit=${limit}`);
+    // ─── Videos ───────────────────────────────────────────
+
+    async getVideos(page = 1, limit = 20, filters?: { subject?: string; search?: string; status?: string; favorite?: boolean }) {
+        let url = `/videos?page=${page}&limit=${limit}`;
+        if (filters?.subject) url += `&subject=${encodeURIComponent(filters.subject)}`;
+        if (filters?.search) url += `&search=${encodeURIComponent(filters.search)}`;
+        if (filters?.status) url += `&status=${filters.status}`;
+        if (filters?.favorite) url += `&favorite=true`;
+        return this.request<any>(url);
     }
 
     async getVideo(id: string) {
@@ -137,6 +144,43 @@ class ApiService {
     async deleteVideo(id: string) {
         return this.request<any>(`/videos/${id}`, {
             method: 'DELETE',
+        });
+    }
+
+    async submitQuizResult(videoId: string, data: { score: number; totalQuestions: number; correctAnswers: number; type: 'quiz' | 'yks' }) {
+        return this.request<any>(`/videos/${videoId}/quiz-result`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    // ─── Analytics ────────────────────────────────────────
+
+    async getAnalytics() {
+        return this.request<any>('/analytics');
+    }
+
+    async getWeeklyStats() {
+        return this.request<any>('/analytics/weekly');
+    }
+
+    async recordStudySession(data: { subject?: string; minutesStudied?: number; totalQuestions?: number; correctAnswers?: number }) {
+        return this.request<any>('/analytics/record', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    // ─── Planner ──────────────────────────────────────────
+
+    async getTodayPlan() {
+        return this.request<any>('/planner/today');
+    }
+
+    async savePlannerSettings(data: { examTarget?: string; estimatedScore?: number; examDate?: string }) {
+        return this.request<any>('/planner/settings', {
+            method: 'POST',
+            body: JSON.stringify(data),
         });
     }
 }
