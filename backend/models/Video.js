@@ -12,6 +12,20 @@ const quizQuestionSchema = new mongoose.Schema({
     explanation: { type: String, default: '' },
 });
 
+const timestampNoteSchema = new mongoose.Schema({
+    time: { type: String, required: true },
+    seconds: { type: Number, default: 0 },
+    note: { type: String, required: true },
+});
+
+const yksQuestionSchema = new mongoose.Schema({
+    question: { type: String, required: true },
+    options: [{ type: String, required: true }],
+    correctAnswer: { type: Number, required: true },
+    explanation: { type: String, default: '' },
+    difficulty: { type: String, enum: ['kolay', 'orta', 'zor'], default: 'orta' },
+});
+
 const videoSchema = new mongoose.Schema(
     {
         userId: {
@@ -58,6 +72,13 @@ const videoSchema = new mongoose.Schema(
         },
         flashcards: [flashcardSchema],
         quizQuestions: [quizQuestionSchema],
+        timestampNotes: [timestampNoteSchema],
+        yksQuestions: [yksQuestionSchema],
+        watchProgress: {
+            completed: { type: Boolean, default: false },
+            lastPosition: { type: Number, default: 0 },
+            watchedAt: { type: Date, default: null },
+        },
         status: {
             type: String,
             enum: ['pending', 'processing', 'completed', 'failed'],
@@ -85,5 +106,6 @@ const videoSchema = new mongoose.Schema(
 // Index for efficient queries
 videoSchema.index({ userId: 1, createdAt: -1 });
 videoSchema.index({ userId: 1, isFavorite: 1 });
+videoSchema.index({ userId: 1, subject: 1 });
 
 module.exports = mongoose.models.Video || mongoose.model('Video', videoSchema);

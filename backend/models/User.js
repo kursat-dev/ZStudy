@@ -47,6 +47,28 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        examTarget: {
+            type: String,
+            default: null,
+        },
+        estimatedScore: {
+            type: Number,
+            default: null,
+        },
+        examDate: {
+            type: Date,
+            default: null,
+        },
+        weeklyStats: [
+            {
+                week: { type: String },
+                videosWatched: { type: Number, default: 0 },
+                quizzesTaken: { type: Number, default: 0 },
+                accuracy: { type: Number, default: 0 },
+                minutesStudied: { type: Number, default: 0 },
+                _id: false,
+            },
+        ],
         preferences: {
             notifications: { type: Boolean, default: true },
             darkMode: { type: Boolean, default: true },
