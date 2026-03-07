@@ -1,5 +1,4 @@
 {
-    "name": "StudyFlow - YouTube Processor",
     "nodes": [
         {
             "parameters": {
@@ -7,13 +6,13 @@
                 "path": "youtube-process",
                 "options": {}
             },
-            "id": "1",
+            "id": "0261602b-a260-43f5-a79c-59bd79dd5cee",
             "name": "Webhook Trigger",
             "type": "n8n-nodes-base.webhook",
             "typeVersion": 1,
             "position": [
-                100,
-                300
+                48,
+                -64
             ],
             "webhookId": "studyflow-youtube-webhook"
         },
@@ -21,13 +20,13 @@
             "parameters": {
                 "jsCode": "// Extract YouTube ID from URL\nconst url = $input.item.json.body.youtubeUrl;\nconst videoId = $input.item.json.body.videoId;\nconst userId = $input.item.json.body.userId;\n\nlet youtubeId = null;\nconst patterns = [\n  /(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)([^&\\n?#]+)/,\n  /youtube\\.com\\/shorts\\/([^&\\n?#]+)/\n];\n\nfor (const pattern of patterns) {\n  const match = url.match(pattern);\n  if (match) youtubeId = match[1];\n}\n\nreturn {\n  videoId,\n  userId,\n  youtubeUrl: url,\n  youtubeId\n};"
             },
-            "id": "2",
+            "id": "13c73978-4648-4c2f-abbb-be2b46ac10a2",
             "name": "Parse Input",
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [
-                300,
-                300
+                256,
+                -64
             ]
         },
         {
@@ -54,13 +53,13 @@
                     }
                 }
             },
-            "id": "3",
+            "id": "435b494c-0d1a-4721-b3eb-534ae9f1c23d",
             "name": "Get Transcript (API)",
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4,
             "position": [
-                500,
-                300
+                448,
+                -64
             ],
             "notesInFlow": true,
             "notes": "Replace with your preferred transcript API or python/npm script"
@@ -69,63 +68,59 @@
             "parameters": {
                 "jsCode": "const transcriptData = $input.item.json.transcript || $input.item.json.text || \"\";\nlet cleanTranscript = \"\";\n\n// If API returns an array of segments, combine them\nif (Array.isArray(transcriptData)) {\n  cleanTranscript = transcriptData.map(t => t.text).join(\" \");\n} else if (typeof transcriptData === 'string') {\n  cleanTranscript = transcriptData;\n}\n\n// Remove excessive whitespace and newlines\ncleanTranscript = cleanTranscript.replace(/\\s+/g, ' ').trim();\n\n// Basic chunking to avoid LLM token limits (keep first 15000 chars roughly)\nif (cleanTranscript.length > 20000) {\n  cleanTranscript = cleanTranscript.substring(0, 20000) + \"... [TRUNCATED]\";\n}\n\nreturn {\n  videoId: $('Parse Input').item.json.videoId,\n  youtubeId: $('Parse Input').item.json.youtubeId,\n  transcript: cleanTranscript\n};"
             },
-            "id": "4",
+            "id": "d58bee20-b93f-4fe0-bbb4-5173de9abd43",
             "name": "Clean Transcript",
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [
-                700,
-                300
+                656,
+                -64
             ]
         },
         {
             "parameters": {
                 "resource": "chat",
                 "model": "gpt-4o-mini",
-                "prompt": "={{ 'Aşağıdaki eğitim amaçlı video transkriptinden yapılandırılmış çalışma materyalleri oluştur:\\n\\n' + $json.transcript + '\\n\\nLütfen yanıtını SADECE JSON formatında ver, markdown işareti kullanma.' }}",
-                "systemMessage": "Sen uzman bir eğitim asistanısın. YKS (Türkiye üniversite sınavı) öğrencilerine yönelik içerikler hazırlıyorsun. Çıktın her zaman aşağıdaki JSON yapısına tam olarak uymalıdır:\n{\n  \"summary\": \"Konunun kapsamlı ve anlaşılır özeti...\",\n  \"notes\": \"- Önemli kavram 1\\n- Önemli kavram 2\",\n  \"flashcards\": [\n    { \"front\": \"Soru veya Kavram\", \"back\": \"Cevap veya Açıklama\" }\n  ],\n  \"quizQuestions\": [\n    {\n      \"question\": \"Soru metni\",\n      \"options\": [\"A\", \"B\", \"C\", \"D\"],\n      \"correctAnswer\": 0,\n      \"explanation\": \"Açıklama\"\n    }\n  ],\n  \"timestampNotes\": [\n    { \"time\": \"00:45\", \"seconds\": 45, \"note\": \"Konu açıklaması\" }\n  ],\n  \"yksQuestions\": [\n    {\n      \"question\": \"YKS tarzı soru metni\",\n      \"options\": [\"A\", \"B\", \"C\", \"D\"],\n      \"correctAnswer\": 0,\n      \"explanation\": \"Detaylı çözüm\",\n      \"difficulty\": \"orta\"\n    }\n  ],\n  \"title\": \"Videonun başlığı\",\n  \"subject\": \"Ders adı (örn: Biyoloji)\",\n  \"tags\": [\"hücre\", \"mitokondri\"]\n}\n\nÖnemli kurallar:\n- timestampNotes: Transkriptteki zaman bilgilerinden önemli noktaları çıkar. Eğer zaman bilgisi yoksa, yaklaşık süreler tahmin et.\n- yksQuestions: 15-20 arası YKS tarzı çoktan seçmeli soru oluştur. Sorular zorluk seviyesine göre (kolay/orta/zor) etiketle.\n- quizQuestions: 5-8 adet genel anlama sorusu oluştur.\n- Her soru için detaylı açıklama yaz.",
                 "options": {
-                    "temperature": 0.3,
-                    "responseFormat": {
-                        "type": "json_object"
-                    }
-                }
+                    "temperature": 0.3
+                },
+                "requestOptions": {}
             },
-            "id": "5",
+            "id": "23a593ec-77df-44c5-a5b6-0092db9b8c81",
             "name": "OpenAI - Generate Materials",
             "type": "n8n-nodes-base.openAi",
             "typeVersion": 1,
             "position": [
-                900,
-                300
+                848,
+                -64
             ],
-            "credentials": {
-                "openAiApi": {
-                    "id": "YOUR_OPENAI_CREDENTIAL_ID",
-                    "name": "OpenAI account"
-                }
-            },
             "retryOnFail": true,
             "maxTries": 3,
-            "waitBetweenTries": 2000
+            "waitBetweenTries": 2000,
+            "credentials": {
+                "openAiApi": {
+                    "id": "fpp5zEazl7l9pak7",
+                    "name": "OpenAi account"
+                }
+            }
         },
         {
             "parameters": {
                 "jsCode": "try {\n  let aiData = $input.item.json.message.content || $input.item.json.text || $input.item.json.content;\n  \n  if (typeof aiData === 'string') {\n    aiData = JSON.parse(aiData);\n  }\n\n  return {\n    videoId: $('Parse Input').item.json.videoId,\n    title: aiData.title || null,\n    subject: aiData.subject || null,\n    tags: aiData.tags || [],\n    summary: aiData.summary || \"\",\n    notes: aiData.notes || \"\",\n    flashcards: aiData.flashcards || [],\n    quizQuestions: aiData.quizQuestions || [],\n    timestampNotes: aiData.timestampNotes || [],\n    yksQuestions: aiData.yksQuestions || []\n  };\n} catch (error) {\n  throw new Error('Failed to parse AI response: ' + error.message);\n}"
             },
-            "id": "6",
+            "id": "17595608-0ce6-4715-86bf-655b41491f16",
             "name": "Format Output",
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [
-                1100,
-                300
+                1056,
+                -64
             ]
         },
         {
             "parameters": {
                 "method": "POST",
-                "url": "https://your-backend-url.vercel.app/api/videos/process",
+                "url": "https://z-study.vercel.app/api/videos/process",
                 "sendBody": true,
                 "bodyParameters": {
                     "parameters": [
@@ -173,30 +168,30 @@
                 },
                 "options": {}
             },
-            "id": "7",
+            "id": "936dc485-488a-4bc1-8b66-a2e996f20ece",
             "name": "Send to Backend",
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4,
             "position": [
-                1300,
-                300
+                1248,
+                -64
             ]
         },
         {
             "parameters": {},
-            "id": "8",
+            "id": "7431edfd-742d-4991-85bd-394f891853a8",
             "name": "Error Trigger",
             "type": "n8n-nodes-base.errorTrigger",
             "typeVersion": 1,
             "position": [
-                100,
-                600
+                48,
+                240
             ]
         },
         {
             "parameters": {
                 "method": "POST",
-                "url": "https://your-backend-url.vercel.app/api/videos/process",
+                "url": "https://z-study.vercel.app/api/videos/process",
                 "sendBody": true,
                 "bodyParameters": {
                     "parameters": [
@@ -216,13 +211,13 @@
                 },
                 "options": {}
             },
-            "id": "9",
+            "id": "21167074-06d9-443c-9c5b-77eae53fff11",
             "name": "Notify Backend of Failure",
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4,
             "position": [
-                300,
-                600
+                256,
+                240
             ]
         }
     ],
@@ -305,5 +300,9 @@
             ]
         }
     },
-    "pinData": {}
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "7878eb45f3b736553e458eee9c961b54e2d0ce01504049ff0f82c6013af8b9b1"
+    }
 }
