@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { YoutubeTranscript } = require('youtube-transcript');
 const Video = require('../../models/Video');
 const User = require('../../models/User');
 const StudyAnalytics = require('../../models/StudyAnalytics');
@@ -17,6 +18,30 @@ function extractYouTubeId(url) {
     }
     return null;
 }
+
+// GET /api/videos/transcript — Get YouTube transcript purely using local backend library
+router.get('/transcript', async (req, res) => {
+    try {
+        const { url, videoId } = req.query;
+
+        if (!url && !videoId) {
+            return res.status(400).json({ success: false, message: 'URL veya Video ID gerekli' });
+        }
+
+        const targetUrl = url || `https://www.youtube.com/watch?v=${videoId}`;
+
+        const transcript = await YoutubeTranscript.fetchTranscript(targetUrl);
+        const fullText = transcript.map(t => t.text).join(' ');
+
+        res.json({
+            success: true,
+            transcript: fullText
+        });
+    } catch (error) {
+        console.error('Transcript fetch error:', error);
+        res.status(500).json({ success: false, message: 'Altyazı alınamadı', error: error.message });
+    }
+});
 
 // GET /api/videos — Get all user's videos
 router.get('/', authenticate, async (req, res) => {

@@ -31,25 +31,15 @@
         },
         {
             "parameters": {
-                "url": "={{ 'https://youtube-transcript3.p.rapidapi.com/api/transcript-with-url?url=' + $json.youtubeUrl + '&flat=true&lang=tr' }}",
-                "sendHeaders": true,
+                "url": "={{ 'https://z-study.vercel.app/api/videos/transcript?url=' + .youtubeUrl }}",
+                "sendQuery": false,
+                "sendHeaders": false,
                 "headerParameters": {
-                    "parameters": [
-                        {
-                            "name": "X-RapidAPI-Key",
-                            "value": "YOUR_RAPIDAPI_KEY_HERE"
-                        },
-                        {
-                            "name": "X-RapidAPI-Host",
-                            "value": "youtube-transcript3.p.rapidapi.com"
-                        }
-                    ]
+                    "parameters": []
                 },
                 "options": {
                     "response": {
-                        "response": {
-                            "responseFormat": "json"
-                        }
+                        "responseFormat": "json"
                     }
                 }
             },
