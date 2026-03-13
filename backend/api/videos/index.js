@@ -248,15 +248,20 @@ router.post('/process', async (req, res) => {
 
         // Try to mark as failed
         if (req.body.videoId) {
-            await Video.findByIdAndUpdate(req.body.videoId, {
-                status: 'failed',
-                errorMessage: error.message,
-            });
+            try {
+                await Video.findByIdAndUpdate(req.body.videoId, {
+                    status: 'failed',
+                    errorMessage: error.message || 'Bilinmeyen Hata',
+                });
+            } catch (updateError) {
+                console.error('Failed to update error status:', updateError);
+            }
         }
 
         res.status(500).json({
             success: false,
             message: 'Video işlenirken hata oluştu.',
+            error: error.message
         });
     }
 });
