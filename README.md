@@ -115,4 +115,4 @@ ZStudy/
 ```
 
 ## 🤝 Katkıda Bulunma
-Her türlü geri bildirim ve katkıya açığız. Lütfen bir Pull Request (PR) göndermeden önce uygulanacak değişikliği bir Issue açarak belirtiniz.
+Her türlü katkıya açığız. Lütfen bir Pull Request (PR) göndermeden önce uygulanacak değişikliği bir Issue açarak belirtiniz.
