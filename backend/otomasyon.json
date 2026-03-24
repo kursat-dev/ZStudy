@@ -1,0 +1,308 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://z-study.vercel.app/api/videos/process",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "videoId",
+                            "value": "={{ $('Parse Input').item.json?.videoId || 'unknown' }}"
+                        },
+                        {
+                            "name": "status",
+                            "value": "failed"
+                        },
+                        {
+                            "name": "errorMessage",
+                            "value": "={{ $json.error?.message || 'Bilinmeyen bir hata oluştu.' }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "21167074-06d9-443c-9c5b-77eae53fff11",
+            "name": "Notify Backend of Failure",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                256,
+                240
+            ]
+        },
+        {
+            "parameters": {},
+            "id": "7431edfd-742d-4991-85bd-394f891853a8",
+            "name": "Error Trigger",
+            "type": "n8n-nodes-base.errorTrigger",
+            "typeVersion": 1,
+            "position": [
+                48,
+                240
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://z-study.vercel.app/api/videos/process",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "videoId",
+                            "value": "={{ $json.videoId }}"
+                        },
+                        {
+                            "name": "title",
+                            "value": "={{ $json.title }}"
+                        },
+                        {
+                            "name": "summary",
+                            "value": "={{ $json.summary }}"
+                        },
+                        {
+                            "name": "notes",
+                            "value": "={{ $json.notes }}"
+                        },
+                        {
+                            "name": "flashcards",
+                            "value": "={{ JSON.stringify($json.flashcards) }}"
+                        },
+                        {
+                            "name": "quizQuestions",
+                            "value": "={{ JSON.stringify($json.quizQuestions) }}"
+                        },
+                        {
+                            "name": "subject",
+                            "value": "={{ $json.subject }}"
+                        },
+                        {
+                            "name": "tags",
+                            "value": "={{ JSON.stringify($json.tags) }}"
+                        },
+                        {
+                            "name": "timestampNotes",
+                            "value": "={{ JSON.stringify($json.timestampNotes) }}"
+                        },
+                        {
+                            "name": "yksQuestions",
+                            "value": "={{ JSON.stringify($json.yksQuestions) }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "936dc485-488a-4bc1-8b66-a2e996f20ece",
+            "name": "Send to Backend",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1248,
+                -64
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "try {\n  let aiData = $input.item.json.message.content || $input.item.json.text || $input.item.json.content;\n  \n  if (typeof aiData === 'string') {\n    aiData = JSON.parse(aiData);\n  }\n\n  return {\n    videoId: $('Parse Input').item.json.videoId,\n    title: aiData.title || null,\n    subject: aiData.subject || null,\n    tags: aiData.tags || [],\n    summary: aiData.summary || \"\",\n    notes: aiData.notes || \"\",\n    flashcards: aiData.flashcards || [],\n    quizQuestions: aiData.quizQuestions || [],\n    timestampNotes: aiData.timestampNotes || [],\n    yksQuestions: aiData.yksQuestions || []\n  };\n} catch (error) {\n  throw new Error('Failed to parse AI response: ' + error.message);\n}"
+            },
+            "id": "17595608-0ce6-4715-86bf-655b41491f16",
+            "name": "Format Output",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1056,
+                -64
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "chat",
+                "model": "gpt-4o-mini",
+                "options": {
+                    "temperature": 0.3
+                },
+                "requestOptions": {}
+            },
+            "id": "23a593ec-77df-44c5-a5b6-0092db9b8c81",
+            "name": "OpenAI - Generate Materials",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                848,
+                -64
+            ],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 2000,
+            "credentials": {
+                "openAiApi": {
+                    "id": "fpp5zEazl7l9pak7",
+                    "name": "OpenAi account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const transcriptData = $input.item.json.transcript || $input.item.json.text || \"\";\nlet cleanTranscript = \"\";\n\n// If API returns an array of segments, combine them\nif (Array.isArray(transcriptData)) {\n  cleanTranscript = transcriptData.map(t => t.text).join(\" \");\n} else if (typeof transcriptData === 'string') {\n  cleanTranscript = transcriptData;\n}\n\n// Remove excessive whitespace and newlines\ncleanTranscript = cleanTranscript.replace(/\\s+/g, ' ').trim();\n\n// Basic chunking to avoid LLM token limits (keep first 15000 chars roughly)\nif (cleanTranscript.length > 20000) {\n  cleanTranscript = cleanTranscript.substring(0, 20000) + \"... [TRUNCATED]\";\n}\n\nreturn {\n  videoId: $('Parse Input').item.json.videoId,\n  youtubeId: $('Parse Input').item.json.youtubeId,\n  transcript: cleanTranscript\n};"
+            },
+            "id": "d58bee20-b93f-4fe0-bbb4-5173de9abd43",
+            "name": "Clean Transcript",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                656,
+                -64
+            ]
+        },
+        {
+            "parameters": {
+                "url": "={{ 'https://youtube-transcript3.p.rapidapi.com/api/transcript-with-url?url=' + $json.youtubeUrl + '&flat=true&lang=tr' }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-RapidAPI-Key",
+                            "value": "3fc45dee29msh94e173e6a005156p19051fjsn328493e84fea"
+                        },
+                        {
+                            "name": "X-RapidAPI-Host",
+                            "value": "youtube-transcript3.p.rapidapi.com"
+                        }
+                    ]
+                },
+                "options": {
+                    "response": {
+                        "response": {
+                            "responseFormat": "json"
+                        }
+                    }
+                }
+            },
+            "id": "435b494c-0d1a-4721-b3eb-534ae9f1c23d",
+            "name": "Get Transcript (API)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                448,
+                -64
+            ],
+            "notesInFlow": true,
+            "notes": "Replace with your preferred transcript API or python/npm script"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract YouTube ID from URL\nconst url = $input.item.json.body.youtubeUrl;\nconst videoId = $input.item.json.body.videoId;\nconst userId = $input.item.json.body.userId;\n\nlet youtubeId = null;\nconst patterns = [\n  /(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)([^&\\n?#]+)/,\n  /youtube\\.com\\/shorts\\/([^&\\n?#]+)/\n];\n\nfor (const pattern of patterns) {\n  const match = url.match(pattern);\n  if (match) youtubeId = match[1];\n}\n\nreturn {\n  videoId,\n  userId,\n  youtubeUrl: url,\n  youtubeId\n};"
+            },
+            "id": "13c73978-4648-4c2f-abbb-be2b46ac10a2",
+            "name": "Parse Input",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                256,
+                -64
+            ]
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "youtube-process",
+                "options": {}
+            },
+            "id": "0261602b-a260-43f5-a79c-59bd79dd5cee",
+            "name": "Webhook Trigger",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                48,
+                -64
+            ],
+            "webhookId": "studyflow-youtube-webhook"
+        }
+    ],
+    "connections": {
+        "Error Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Notify Backend of Failure",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Output": {
+            "main": [
+                [
+                    {
+                        "node": "Send to Backend",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI - Generate Materials": {
+            "main": [
+                [
+                    {
+                        "node": "Format Output",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Clean Transcript": {
+            "main": [
+                [
+                    {
+                        "node": "OpenAI - Generate Materials",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Transcript (API)": {
+            "main": [
+                [
+                    {
+                        "node": "Clean Transcript",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Input": {
+            "main": [
+                [
+                    {
+                        "node": "Get Transcript (API)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Input",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "7878eb45f3b736553e458eee9c961b54e2d0ce01504049ff0f82c6013af8b9b1"
+    }
+}
