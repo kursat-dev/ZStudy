@@ -2,8 +2,6 @@
 
 **StudyFlow (ZStudy)**, öğrencilerin ve kendi kendine öğrenenlerin çalışma verimliliğini artırmak amacıyla geliştirilmiş yapay zeka destekli bir mobil eğitim uygulamasıdır. Kullanıcıların videolar üzerinden öğrenmelerini, otomatik oluşturulan çalışma kartlarıyla (flashcards) pekiştirmelerini ve quizlerle kendilerini test etmelerini sağlar.
 
-Proje, **React Native (Expo)** tabanlı bir mobil uygulama ve **Node.js (Express) & MongoDB** tabanlı bir backend servisinden oluşmaktadır.
-
 ---
 
 ## 🌟 Özellikler
